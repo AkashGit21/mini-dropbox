@@ -5,9 +5,9 @@ The goal of this project is to implement a simplified Dropbox-like service where
 
 ### API Requirements
     - [ ] **POST** `/files/upload` Allow users to upload files onto the platform.
-    - [ ] **GET** `/files/{fileID}` Retrieve a specific file based on a unique identifier.
+    - [X] **GET** `/files/{fileID}` Retrieve a specific file based on a unique identifier.
     - [ ] **PUT** `/files/{fileID}` Update an existing file or its metadata.
-    - [ ] **DELETE** `/files/{fileID}` Delete a specific file based on a unique identifier.
+    - [X] **DELETE** `/files/{fileID}` Delete a specific file based on a unique identifier.
     - [ ] **GET** `/file` List all available files and their metadata.
 
 ### User Interface
@@ -16,7 +16,7 @@ The goal of this project is to implement a simplified Dropbox-like service where
 1. **File Action Section**: Options to download, update, or delete files by interacting with the corresponding APIs.
 
 ### Technologies
-1. **Backend**: Golang without any framework.
+1. **Backend**: Vanilla Golang with libraries support like Cobra, Gorilla, SQL ORM, etc.
 2. **Database**: MySQL (Relational database) to store the files and metadata.
 3. **Frontend**: A basic UI developed using HTML, CSS, and
 JavaScript.
