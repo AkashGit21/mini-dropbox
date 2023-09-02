@@ -29,14 +29,14 @@ func (x FileStatus) String() string {
 }
 
 type Metadata struct {
-	ID          int64      `json:"id,omitempty"`
-	Filename    string     `json:"filename"`
-	SizeInBytes int64      `json:"size_in_bytes"`
-	S3ObjectKey string     `json:"s3_object_key"`
-	Description string     `json:"description,omitempty"`
-	MimeType    string     `json:"mime_type,omitempty"`
-	Status      FileStatus `json:"status"`
-	PrevKey     string     `json:"prev_key,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          int64      `db:"id" json:"id,omitempty"`
+	Filename    string     `db:"filename" json:"filename"`
+	SizeInBytes int64      `db:"size_in_bytes" json:"size_in_bytes"`
+	S3ObjectKey string     `db:"s3_object_key" json:"s3_object_key"`
+	Description string     `db:"description" json:"description,omitempty"`
+	MimeType    string     `db:"mime_type" json:"mime_type,omitempty"`
+	Status      FileStatus `db:"status" json:"status"`
+	PrevKey     string     `db:"prev_key" json:"-"`
+	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
 }

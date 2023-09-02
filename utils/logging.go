@@ -58,7 +58,7 @@ func printLog(logLevel string, args ...interface{}) {
 	}
 	defer logFile.Close()
 
-	logger := log.New(logFile, logLevel, log.Ldate|log.Ltime|log.Lshortfile)
+	logger := log.New(logFile, logLevel+": ", log.Ldate|log.Ltime|log.Lshortfile)
 	args = append(args, whereami.WhereAmI(3))
 	logger.Println(args...)
 }

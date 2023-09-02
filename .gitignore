@@ -22,3 +22,6 @@ go.work
 
 # environment variables
 .env
+
+# Storage folder
+/storage

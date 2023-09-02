@@ -35,3 +35,8 @@ JavaScript.
 1. Update the .env file in the project directory by using `.env.example` file. Fill in all the necessary values to make connection with the pre-requisites defined above.
 1. Add the required table(s) to your RDBMS system by using commands from `metadata.sql`.
 1. Run the application using terminal by typing: `make run`
+
+### Extra Points considered for Application Server
+1. **Graceful shutdown**: This avoids any side effects on conflicts that may occur on closing the server and the new deployment can be started without any kind of difficulty.
+1. **Logging**: For debugging and monitoring the application on remote servers, it is recommended to log the application functionality.
+1. **Panic Handler**: Used to prevent the application from being killed, in case of any runtime errors or application malfunctioning.
