@@ -3,19 +3,92 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/AkashGit21/typeface-assignment/models"
 	"github.com/AkashGit21/typeface-assignment/utils"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/gorilla/mux"
 )
 
-// TODO: Uploads the file to blob storage (s3 here).
+// Uploads the file to blob storage (s3 here).
 func (ah *APIHandler) uploadFile(w http.ResponseWriter, r *http.Request) {
 	utils.DebugLog("inside uploadFile")
 
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
+	// Parse the multipart form data
+	err := r.ParseMultipartForm(10 << 9) // Setting the max limit to 100MB
+	if err != nil {
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve the description and uploaded file
+	desc := r.FormValue("description")
+	file, header, err := r.FormFile("upload_file")
+	if err != nil {
+		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Specify the S3 bucket and object key where you want to upload the file
+	bucketName := utils.GetEnvValue("S3_BUCKET", "dropbox_files")
+	s3ObjectKey := header.Filename + "_" + fmt.Sprint(time.Now().UnixNano())
+
+	idChan := make(chan int64)
+	go func(fh *multipart.FileHeader, uri, description string) {
+		ext := fh.Filename[strings.LastIndexByte(fh.Filename, '.'):]
+		mimeType := mime.TypeByExtension(ext)
+
+		record := models.Metadata{
+			Filename:    fh.Filename,
+			SizeInBytes: fh.Size,
+			S3ObjectKey: uri,
+			MimeType:    mimeType,
+			Description: description,
+			Status:      1,
+		}
+		// Insert the metadata into RDBMS using goroutine
+		id, err := ah.MetadataOps.SaveRecord(record)
+		if err != nil {
+			utils.ErrorLog("Error saving metadata for upload: ", err)
+			return
+		}
+		idChan <- id
+	}(header, fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, s3ObjectKey), desc)
+
+	// Create an uploader with the S3 client and specify the bucket and object key
+	uploader := s3manager.NewUploaderWithClient(ah.s3Client)
+
+	// Upload the file to S3
+	_, err = uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(s3ObjectKey),
+		Body:   file,
+	})
+	if err != nil {
+		http.Error(w, "Error uploading file to S3", http.StatusInternalServerError)
+		return
+	}
+	id := <-idChan
+	close(idChan)
+
+	jsonBytes, err := getCustomMessage(map[string]interface{}{
+		"id": id,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonBytes)
 }
 
 // Fetch the file metadata from persistent storage (s3 here).
@@ -111,4 +184,32 @@ func (ah *APIHandler) deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(getSuccessMessage())
+}
+
+func (ah *APIHandler) listFiles(w http.ResponseWriter, r *http.Request) {
+	utils.DebugLog("inside listFiles")
+
+	w.Header().Add("Content-Type", "application/json")
+
+	data, err := ah.MetadataOps.FetchRecords()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(getFailureMessage(err))
+		return
+	}
+
+	if data == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(getFailureMessage(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBytes)
 }

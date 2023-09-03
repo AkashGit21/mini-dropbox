@@ -18,6 +18,7 @@ help:
 
 .PHONY: run
 run:
+	mkdir -p storage/
 	$(GORUN) $(EXEC_ROOT) run
 
 .PHONY: test

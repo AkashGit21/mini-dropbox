@@ -4,11 +4,13 @@
 The goal of this project is to implement a simplified Dropbox-like service where users can upload, retrieve, and manage their files through a set of RESTful APIs. Alongside the backend APIs, a basic UI will also be provided to showcase these functionalities. The service should also support the storage of metadata for each uploaded file, such as the file name, creation timestamp, and more. 
 
 ### API Requirements
-    - [ ] **POST** `/files/upload` Allow users to upload files onto the platform.
+    - [X] **POST** `/files/upload` Allow users to upload files onto the platform.
     - [X] **GET** `/files/{fileID}` Retrieve a specific file based on a unique identifier.
     - [ ] **PUT** `/files/{fileID}` Update an existing file or its metadata.
-    - [X] **DELETE** `/files/{fileID}` Delete a specific file based on a unique identifier.
-    - [ ] **GET** `/file` List all available files and their metadata.
+    - [X] **DELETE** `/files/{fileID}` Delete a specific file based on a unique identifier. 
+    - [X] **GET** `/file` List all available files and their metadata.
+
+**Note**: Applied a soft delete, instead of hard delete for the file. Wrote a separate cron to delete the file data after 30 days of inactivity.
 
 ### User Interface
 1. **File Upload Section**: A form to upload a new file and its metadata.
@@ -25,7 +27,8 @@ JavaScript.
 ### Pre-requisites and dependencies
 1. Golang v1.19 or above
 2. MySQL database (v8.0 or above)
-3. Make (used to run Makefile)
+3. make (used to run Makefile)
+4. S3 bucket with public access and following server ACLs: GetObject, PutObject, DeleteObject, ListObject, etc.
 
 ### Steps to run the application
 1. Navigate to the project directory in terminal and fetch all the dependencies using following command:
@@ -33,8 +36,12 @@ JavaScript.
     $ go mod download
     ```
 1. Update the .env file in the project directory by using `.env.example` file. Fill in all the necessary values to make connection with the pre-requisites defined above.
-1. Add the required table(s) to your RDBMS system by using commands from `metadata.sql`.
-1. Run the application using terminal by typing: `make run`
+1. Add the required table(s) to your RDBMS system by using commands from `metadata.sql`. 
+**Note**: This is a one-time step only. Taking this step again will clear all the metadata from RDBMS.
+1. Run the application using terminal by typing: 
+    ```sh
+    $ make run
+    ```
 
 ### Extra Points considered for Application Server
 1. **Graceful shutdown**: This avoids any side effects on conflicts that may occur on closing the server and the new deployment can be started without any kind of difficulty.

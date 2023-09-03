@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/AkashGit21/typeface-assignment/models"
@@ -13,7 +14,8 @@ import (
 )
 
 type PersistenceDBLayer struct {
-	*sql.DB
+	db *sql.DB
+	sync.Mutex
 }
 
 type MetadataOps interface {
@@ -23,7 +25,7 @@ type MetadataOps interface {
 	FetchRecords() ([]models.Metadata, error)
 	GetRecord(id int64) (*models.Metadata, error)
 	DeactivateRecord(id int64) error
-	DeleteRecord(id int64) error
+	DeleteRecords() error
 }
 
 func NewPersistenceDBLayer() (MetadataOps, error) {
@@ -50,7 +52,7 @@ func NewPersistenceDBLayer() (MetadataOps, error) {
 	}
 
 	return &PersistenceDBLayer{
-		db,
+		db: db,
 	}, nil
 }
 
@@ -60,7 +62,7 @@ func (pdb *PersistenceDBLayer) Exists(id int64) (bool, error) {
 
 	// Execute the query with the target ID
 	var exists bool
-	err := pdb.QueryRow(query, id).Scan(&exists)
+	err := pdb.db.QueryRow(query, id).Scan(&exists)
 
 	// Check for errors
 	if err == sql.ErrNoRows {
@@ -69,7 +71,6 @@ func (pdb *PersistenceDBLayer) Exists(id int64) (bool, error) {
 		return false, err
 	}
 	return exists, nil
-
 }
 
 // Insert a new metadata record into the database
@@ -78,12 +79,14 @@ func (pdb *PersistenceDBLayer) SaveRecord(record models.Metadata) (int64, error)
 	defer cancel()
 
 	// Insert new metadata into the "file_metadata" table.
-	stmt, err := pdb.Prepare("INSERT INTO file_metadata (filename, size_in_bytes, s3_object_key, description, mime_type, status) VALUES (?, ?, ?, ?, ?, ?)")
+	stmt, err := pdb.db.Prepare("INSERT INTO file_metadata (filename, size_in_bytes, s3_object_key, description, mime_type, status) VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return int64(-1), err
 	}
 	defer stmt.Close()
 
+	pdb.Lock()
+	defer pdb.Unlock()
 	// Execute the SQL statement to insert the new row
 	res, err := stmt.Exec(record.Filename, record.SizeInBytes, record.S3ObjectKey, record.Description, record.MimeType, record.Status)
 	if err != nil {
@@ -101,10 +104,10 @@ func (pdb *PersistenceDBLayer) UpdateRecord(id int64, record models.Metadata) er
 // Returns all the active metadata records from Database.
 func (pdb *PersistenceDBLayer) FetchRecords() ([]models.Metadata, error) {
 	// Query to retrieve records with "filename" and "description" fields.
-	query := "SELECT id, filename, size_in_bytes, s3_object_key, description, mime_type, status, created_at, updated_at FROM files WHERE status = 1 LIMIT 10"
+	query := "SELECT id, filename, size_in_bytes, s3_object_key, description, mime_type, created_at, updated_at FROM file_metadata WHERE status = 1 LIMIT 20"
 
 	// Execute the query and retrieve the results.
-	rows, err := pdb.Query(query)
+	rows, err := pdb.db.Query(query)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,8 +117,9 @@ func (pdb *PersistenceDBLayer) FetchRecords() ([]models.Metadata, error) {
 	var files []models.Metadata
 	for rows.Next() {
 		var file models.Metadata
-		if err := rows.Scan(&file.ID, &file.Filename, &file.SizeInBytes, &file.S3ObjectKey, &file.Description, &file.MimeType, &file.Status, &file.CreatedAt, &file.UpdatedAt); err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&file.ID, &file.Filename, &file.SizeInBytes, &file.S3ObjectKey, &file.Description, &file.MimeType, &file.CreatedAt, &file.UpdatedAt); err != nil {
+			ErrorLog("unable to get file metadata")
+			continue
 		}
 		files = append(files, file)
 	}
@@ -132,7 +136,7 @@ func (pdb *PersistenceDBLayer) GetRecord(id int64) (*models.Metadata, error) {
 
 	// Execute the query with the primary key value
 	var metadata models.Metadata
-	err := pdb.QueryRow(query, id).Scan(
+	err := pdb.db.QueryRow(query, id).Scan(
 		&metadata.ID, &metadata.Filename, &metadata.SizeInBytes, &metadata.S3ObjectKey,
 		&metadata.Description, &metadata.MimeType, &metadata.CreatedAt, &metadata.UpdatedAt,
 	)
@@ -150,7 +154,10 @@ func (pdb *PersistenceDBLayer) GetRecord(id int64) (*models.Metadata, error) {
 
 func (pdb *PersistenceDBLayer) DeactivateRecord(id int64) error {
 	query := "UPDATE file_metadata SET status = 0 WHERE id =?"
-	res, err := pdb.Exec(query, id)
+	pdb.Lock()
+	defer pdb.Unlock()
+
+	res, err := pdb.db.Exec(query, id)
 	if err != nil {
 		return err
 	}
@@ -165,6 +172,10 @@ func (pdb *PersistenceDBLayer) DeactivateRecord(id int64) error {
 	return err
 }
 
-func (pdb *PersistenceDBLayer) DeleteRecord(id int64) error {
+func (pdb *PersistenceDBLayer) DeleteRecords() error {
+	// Find all the records who are inactive and haven't been updated since the last 30 days
+
+	// Remove all those records from blob storage, to increase the amount of available space.
+
 	return nil
 }

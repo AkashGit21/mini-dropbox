@@ -30,3 +30,11 @@ func getFailureMessage(err error) []byte {
 	}
 	return data
 }
+
+func getCustomMessage(msg map[string]interface{}) ([]byte, error) {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
