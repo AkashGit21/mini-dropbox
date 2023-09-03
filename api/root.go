@@ -1,9 +1,7 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/AkashGit21/typeface-assignment/utils"
 	"github.com/gorilla/handlers"
@@ -49,10 +47,8 @@ func DeleteInactiveRecords() error {
 	}
 
 	bucketName := utils.GetEnvValue("S3_BUCKET", "typeface-assignment")
-	objectPrefix := fmt.Sprintf("https://%s.s3.amazonaws.com/", bucketName)
-
 	for _, record := range records {
-		s3Key := strings.TrimPrefix(record.S3ObjectKey, objectPrefix)
+		s3Key := getS3KeyFromURI(record.S3ObjectKey)
 		if err = ah.S3Ops.DeleteObject(bucketName, s3Key); err != nil {
 			utils.ErrorLog("unable to remove the s3 object with following details: ", record)
 			continue

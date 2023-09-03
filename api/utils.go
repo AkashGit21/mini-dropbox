@@ -1,6 +1,12 @@
 package api
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/AkashGit21/typeface-assignment/utils"
+)
 
 var (
 	SUCCESS_MSG = map[string]interface{}{
@@ -37,4 +43,11 @@ func getCustomMessage(msg map[string]interface{}) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+func getS3KeyFromURI(uri string) string {
+	bucketName := utils.GetEnvValue("S3_BUCKET", "bucket")
+
+	prefix := fmt.Sprintf("https://%s.s3.amazonaws.com/", bucketName)
+	return strings.TrimPrefix(uri, prefix)
 }

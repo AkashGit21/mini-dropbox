@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -63,7 +62,7 @@ func (ah *APIHandler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		idChan <- id
 	}(header, fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, s3ObjectKey), desc)
 
-	log.Println("File size in bytes: ", header.Size)
+	utils.DebugLog("File size in bytes: ", header.Size)
 	if header.Size <= 5*1024*1024 {
 		err = ah.S3Ops.UploadObject(bucketName, s3ObjectKey, file)
 		if err != nil {
@@ -139,7 +138,7 @@ func (ah *APIHandler) getFile(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-// TODO: Upload the new file to blob storage and update metadata with new url.
+// Upload the new file to blob storage and update metadata with new url.
 func (ah *APIHandler) updateFile(w http.ResponseWriter, r *http.Request) {
 	utils.DebugLog("inside updateFile")
 
@@ -167,6 +166,7 @@ func (ah *APIHandler) updateFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the record with given ID to verify if it exists
 	record, err := ah.MetadataOps.GetRecord(fileID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -192,6 +192,7 @@ func (ah *APIHandler) updateFile(w http.ResponseWriter, r *http.Request) {
 	// Specify the S3 bucket and object key where you want to upload the file
 	bucketName := utils.GetEnvValue("S3_BUCKET", "dropbox_files")
 	s3ObjectKey := header.Filename + "_" + fmt.Sprint(time.Now().UnixNano())
+	newS3Key := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, s3ObjectKey)
 
 	boolChan := make(chan bool)
 	go func(fh *multipart.FileHeader, uri, description string) {
@@ -212,9 +213,9 @@ func (ah *APIHandler) updateFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		boolChan <- true
-	}(header, fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, s3ObjectKey), desc)
+	}(header, newS3Key, desc)
 
-	log.Println("File size in bytes: ", header.Size)
+	utils.DebugLog("File size in bytes: ", header.Size)
 	if header.Size <= 5*1024*1024 {
 		err = ah.S3Ops.UploadObject(bucketName, s3ObjectKey, file)
 		if err != nil {
@@ -236,7 +237,15 @@ func (ah *APIHandler) updateFile(w http.ResponseWriter, r *http.Request) {
 	<-boolChan
 	close(boolChan)
 
-	// Remove the previous uploaded object
+	// Remove the previous uploaded object from blob store
+	go func(bucket, s3Key, newKey string) {
+		if !strings.EqualFold(s3Key, newKey) {
+			if err = ah.S3Ops.DeleteObject(bucket, getS3KeyFromURI(s3Key)); err != nil {
+				utils.ErrorLog("error deleting object: ", err)
+				return
+			}
+		}
+	}(bucketName, record.S3ObjectKey, newS3Key)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(getSuccessMessage())
