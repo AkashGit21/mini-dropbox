@@ -1,14 +1,16 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/AkashGit21/typeface-assignment/utils"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type APIHandler struct {
 	utils.MetadataOps
-	s3Client *s3.S3
+	utils.S3Ops
 }
 
 func NewAPIHandler() *APIHandler {
@@ -30,6 +32,14 @@ func NewAPIHandler() *APIHandler {
 
 func dropboxHandler(r *mux.Router) {
 	dh := NewAPIHandler()
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+	})
+
+	// Apply the CORS middleware to your router
+	http.Handle("/", corsMiddleware.Handler(r))
 
 	r.HandleFunc("/files/upload", dh.uploadFile).Methods("POST")
 	r.HandleFunc("/files/{fileID}", dh.getFile).Methods("GET")

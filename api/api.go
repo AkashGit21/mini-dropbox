@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -13,8 +14,6 @@ import (
 
 	"github.com/AkashGit21/typeface-assignment/models"
 	"github.com/AkashGit21/typeface-assignment/utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/gorilla/mux"
 )
 
@@ -64,19 +63,25 @@ func (ah *APIHandler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		idChan <- id
 	}(header, fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, s3ObjectKey), desc)
 
-	// Create an uploader with the S3 client and specify the bucket and object key
-	uploader := s3manager.NewUploaderWithClient(ah.s3Client)
-
-	// Upload the file to S3
-	_, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(s3ObjectKey),
-		Body:   file,
-	})
-	if err != nil {
-		http.Error(w, "Error uploading file to S3", http.StatusInternalServerError)
-		return
+	log.Println("File size in bytes: ", header.Size)
+	if header.Size <= 5*1024*1024 {
+		err = ah.S3Ops.UploadObject(bucketName, s3ObjectKey, file)
+		if err != nil {
+			utils.ErrorLog("Error uploading metadata for upload: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(getFailureMessage(errors.New("unable to upload object")))
+			return
+		}
+	} else {
+		err = ah.S3Ops.UploadObjectParts(bucketName, s3ObjectKey, file)
+		if err != nil {
+			utils.ErrorLog("Error uploading metadata for upload: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(getFailureMessage(errors.New("unable to upload object")))
+			return
+		}
 	}
+
 	id := <-idChan
 	close(idChan)
 
@@ -138,7 +143,103 @@ func (ah *APIHandler) getFile(w http.ResponseWriter, r *http.Request) {
 func (ah *APIHandler) updateFile(w http.ResponseWriter, r *http.Request) {
 	utils.DebugLog("inside updateFile")
 
-	w.WriteHeader(http.StatusNotImplemented)
+	vars := mux.Vars(r)
+	id := vars["fileID"]
+
+	w.Header().Add("Content-Type", "application/json")
+	if utils.IsEmptyString(id) {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(getFailureMessage(errors.New("unique id of file is required")))
+		return
+	}
+
+	fileID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(getFailureMessage(err))
+		return
+	}
+
+	// Parse the multipart form data
+	err = r.ParseMultipartForm(10 << 9) // Setting the max limit to 100MB
+	if err != nil {
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
+
+	record, err := ah.MetadataOps.GetRecord(fileID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(getFailureMessage(err))
+		return
+	}
+
+	if record == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(getFailureMessage(errors.New("no file exists with given id")))
+		return
+	}
+
+	// Retrieve the description and uploaded file
+	desc := r.FormValue("description")
+	file, header, err := r.FormFile("upload_file")
+	if err != nil {
+		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Specify the S3 bucket and object key where you want to upload the file
+	bucketName := utils.GetEnvValue("S3_BUCKET", "dropbox_files")
+	s3ObjectKey := header.Filename + "_" + fmt.Sprint(time.Now().UnixNano())
+
+	boolChan := make(chan bool)
+	go func(fh *multipart.FileHeader, uri, description string) {
+		ext := fh.Filename[strings.LastIndexByte(fh.Filename, '.'):]
+		mimeType := mime.TypeByExtension(ext)
+
+		newRecord := models.Metadata{
+			Filename:    fh.Filename,
+			SizeInBytes: fh.Size,
+			S3ObjectKey: uri,
+			MimeType:    mimeType,
+			Description: description,
+			Status:      1,
+		}
+		// Insert the metadata into RDBMS using goroutine
+		if err := ah.MetadataOps.UpdateRecord(fileID, newRecord); err != nil {
+			utils.ErrorLog("Error saving metadata for upload: ", err)
+			return
+		}
+		boolChan <- true
+	}(header, fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucketName, s3ObjectKey), desc)
+
+	log.Println("File size in bytes: ", header.Size)
+	if header.Size <= 5*1024*1024 {
+		err = ah.S3Ops.UploadObject(bucketName, s3ObjectKey, file)
+		if err != nil {
+			utils.ErrorLog("Error uploading metadata for upload: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(getFailureMessage(errors.New("unable to upload object")))
+			return
+		}
+	} else {
+		err = ah.S3Ops.UploadObjectParts(bucketName, s3ObjectKey, file)
+		if err != nil {
+			utils.ErrorLog("Error uploading metadata for upload: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(getFailureMessage(errors.New("unable to upload object")))
+			return
+		}
+	}
+
+	<-boolChan
+	close(boolChan)
+
+	// Remove the previous uploaded object
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(getSuccessMessage())
 }
 
 // Soft deletes the file from blob storage.

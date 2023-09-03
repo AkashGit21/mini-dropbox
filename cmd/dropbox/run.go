@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"time"
 
+	"github.com/AkashGit21/typeface-assignment/api"
 	"github.com/AkashGit21/typeface-assignment/utils"
 	"github.com/go-co-op/gocron"
 	"github.com/spf13/cobra"
@@ -22,14 +22,15 @@ func init() {
 
 			s := gocron.NewScheduler(time.Local)
 			_, _ = s.Cron("30 1 * * *").Do(func() {
-				log.Println("Cron runs at 1:30 AM every night asynchronously")
-				metaOps, err := utils.NewPersistenceDBLayer()
+				utils.InfoLog("Cron runs at 1:30 AM every night asynchronously")
+
+				err = api.DeleteInactiveRecords()
 				if err != nil {
-					utils.ErrorLog("Error getting new persistence db layer:", err)
+					utils.ErrorLog("unable to delete records through cron job:", err)
 					return
 				}
-				metaOps.DeleteRecords()
-			}) // every day at 1:30 am
+
+			})
 			s.StartAsync()
 
 			StartServer(srv)

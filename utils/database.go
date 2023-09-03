@@ -25,7 +25,7 @@ type MetadataOps interface {
 	FetchRecords() ([]models.Metadata, error)
 	GetRecord(id int64) (*models.Metadata, error)
 	DeactivateRecord(id int64) error
-	DeleteRecords() error
+	FetchInactiveRecords() ([]models.Metadata, error)
 }
 
 func NewPersistenceDBLayer() (MetadataOps, error) {
@@ -98,6 +98,26 @@ func (pdb *PersistenceDBLayer) SaveRecord(record models.Metadata) (int64, error)
 
 // Update an existing metadata row in the database.
 func (pdb *PersistenceDBLayer) UpdateRecord(id int64, record models.Metadata) error {
+	// Replace with your update statement
+	updateSQL := "UPDATE file_metadata SET filename = ?, size_in_bytes = ?, s3_object_key = ?, mime_type = ?, description = ? WHERE id = ? AND status = 1"
+
+	// Execute the update statement
+	result, err := pdb.db.Exec(updateSQL, record.Filename, record.SizeInBytes, record.S3ObjectKey, record.MimeType, record.Description, id)
+	if err != nil {
+		return err
+	}
+
+	// Check the number of rows affected by the update
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected > 0 {
+		InfoLog("Row updated successfully with id: ", id)
+	} else {
+		WarnLog("No rows were updated for ID ", id)
+	}
 	return nil
 }
 
@@ -172,10 +192,33 @@ func (pdb *PersistenceDBLayer) DeactivateRecord(id int64) error {
 	return err
 }
 
-func (pdb *PersistenceDBLayer) DeleteRecords() error {
-	// Find all the records who are inactive and haven't been updated since the last 30 days
+func (pdb *PersistenceDBLayer) FetchInactiveRecords() ([]models.Metadata, error) {
+	// Calculate the date 30 days ago
+	thirtyDaysAgo := time.Now().AddDate(0, 0, -30).Format("2006-01-02 15:04:05")
 
-	// Remove all those records from blob storage, to increase the amount of available space.
+	// Query to delete rows with status = 1 and updatedAt < 30 days ago
+	query := "SELECT id, filename, s3_object_key, status, created_at updated_at FROM file_metadata WHERE status = 0 AND updatedAt < " + thirtyDaysAgo
 
-	return nil
+	// Execute the query and retrieve the results.
+	rows, err := pdb.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Iterate through the rows and store results in a slice of File structs.
+	var files []models.Metadata
+	for rows.Next() {
+		var file models.Metadata
+		if err := rows.Scan(&file.ID, &file.Filename, &file.S3ObjectKey, &file.Status, &file.CreatedAt, &file.UpdatedAt); err != nil {
+			ErrorLog("unable to get file metadata")
+			continue
+		}
+
+		files = append(files, file)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return files, nil
 }

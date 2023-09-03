@@ -36,7 +36,7 @@ type Metadata struct {
 	Description string     `db:"description" json:"description,omitempty"`
 	MimeType    string     `db:"mime_type" json:"mime_type,omitempty"`
 	Status      FileStatus `db:"status" json:"-"`
-	PrevKey     string     `db:"prev_key" json:"-"`
-	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
+	// PrevKey     string     `db:"prev_key" json:"-"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

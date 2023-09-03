@@ -29,6 +29,24 @@ JavaScript.
 2. MySQL database (v8.0 or above)
 3. make (used to run Makefile)
 4. S3 bucket with public access and following server ACLs: GetObject, PutObject, DeleteObject, ListObject, etc.
+- Sample S3 bucket Policy: 
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "Stmt1405592139000",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": [
+                    "arn:aws:s3:::bucketname/*",
+                    "arn:aws:s3:::bucketname"
+                ]
+            }
+        ]
+    }
+    ```
 
 ### Steps to run the application
 1. Navigate to the project directory in terminal and fetch all the dependencies using following command:
