@@ -79,3 +79,8 @@ The goal of this project is to implement a simplified Dropbox-like service where
 1. **Graceful shutdown**: This avoids any side effects on conflicts that may occur on closing the server and the new deployment can be started without any kind of difficulty.
 1. **Logging**: For debugging and monitoring the application on remote servers, it is recommended to log the application functionality.
 1. **Panic Handler**: Used to prevent the application from being killed, in case of any runtime errors or application malfunctioning.
+
+### Improvements that can be done
+1. Unit tests
+1. Caching the RDBMS response, to save DB queries
+1. Dockerfile - to improve collaboration and ease of working
