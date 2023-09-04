@@ -84,3 +84,4 @@ The goal of this project is to implement a simplified Dropbox-like service where
 1. Unit tests
 1. Caching the RDBMS response, to save DB queries
 1. Dockerfile - to improve collaboration and ease of working
+1. Pagination - implement pagination for the listing page to improve performance and efficiency.
