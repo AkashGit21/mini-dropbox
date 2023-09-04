@@ -1,5 +1,4 @@
 
-// const apiHost = process.env.MINI_DROPBOX_BACKEND_HOST;
-const apiHost = 'http://localhost:8082';
+const apiHost = process.env.REACT_APP_BACKEND_HOST;
 
 export {apiHost};

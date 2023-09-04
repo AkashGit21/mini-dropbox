@@ -6,7 +6,7 @@ The goal of this project is to implement a simplified Dropbox-like service where
 ### API Requirements
     - [X] **POST** `/files/upload` Allow users to upload files onto the platform.
     - [X] **GET** `/files/{fileID}` Retrieve a specific file based on a unique identifier.
-    - [ ] **PUT** `/files/{fileID}` Update an existing file or its metadata.
+    - [X] **PUT** `/files/{fileID}` Update an existing file or its metadata.
     - [X] **DELETE** `/files/{fileID}` Delete a specific file based on a unique identifier. 
     - [X] **GET** `/file` List all available files and their metadata.
 
@@ -18,11 +18,10 @@ The goal of this project is to implement a simplified Dropbox-like service where
 1. **File Action Section**: Options to download, update, or delete files by interacting with the corresponding APIs.
 
 ### Technologies
-1. **Backend**: Vanilla Golang with libraries support like Cobra, Gorilla, SQL ORM, etc.
-2. **Database**: MySQL (Relational database) to store the files and metadata.
-3. **Frontend**: A basic UI developed using HTML, CSS, and
-JavaScript.
-4. **Storage**: Used local storage for simplicity or AWS S3 for storing files, depending on environment file.
+1. **Backend**: Vanilla Golang with libraries support like *Cobra, Gorilla, SQL ORM*, etc.
+2. **Database**: *MySQL* (Relational database) to store the files and metadata.
+3. **Frontend**: A basic UI developed using ReactJS Framework.
+4. **Storage**: Used *AWS S3* for storing files, which can be configured using environment file.
 
 ### Pre-requisites and dependencies
 1. Golang v1.19 or above
@@ -48,18 +47,33 @@ JavaScript.
     }
     ```
 
-### Steps to run the application
+### Steps to run the backend server
 1. Navigate to the project directory in terminal and fetch all the dependencies using following command:
     ```sh 
     $ go mod download
     ```
-1. Update the .env file in the project directory by using `.env.example` file. Fill in all the necessary values to make connection with the pre-requisites defined above.
+1. Create and update the .env file in the project directory by using `.env.example` file. Fill in all the necessary values to make connection with the pre-requisites defined above.
 1. Add the required table(s) to your RDBMS system by using commands from `metadata.sql`. 
 **Note**: This is a one-time step only. Taking this step again will clear all the metadata from RDBMS.
 1. Run the application using terminal by typing: 
     ```sh
     $ make run
     ```
+
+### Steps to start the UI
+1. Navigate to the directory `mini-dropbox-ui` inside the root directory of project. Install all the dependencies using following command: 
+    ```sh
+    $ npm install
+    ```
+1. Create and update the .env.local file in the `mini-dropbox-ui` directory with key `REACT_APP_BACKEND_HOST`. Sample: 
+    ```sh
+    REACT_APP_BACKEND_HOST="http://localhost:8082"
+    ```
+1. Run the React application on local computer using the following command:
+    ```sh
+    $ npm start
+    ```
+1. Open your browser and navigate to the UI using the address: `http://localhost:3000`
 
 ### Extra Points considered for Application Server
 1. **Graceful shutdown**: This avoids any side effects on conflicts that may occur on closing the server and the new deployment can be started without any kind of difficulty.

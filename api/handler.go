@@ -5,7 +5,6 @@ import (
 
 	"github.com/AkashGit21/typeface-assignment/utils"
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 )
 
 type APIHandler struct {
@@ -32,18 +31,16 @@ func NewAPIHandler() *APIHandler {
 
 func dropboxHandler(r *mux.Router) {
 	dh := NewAPIHandler()
-	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
-	})
-
-	// Apply the CORS middleware to your router
-	http.Handle("/", corsMiddleware.Handler(r))
 
 	r.HandleFunc("/files/upload", dh.uploadFile).Methods("POST")
 	r.HandleFunc("/files/{fileID}", dh.getFile).Methods("GET")
 	r.HandleFunc("/files/{fileID}", dh.updateFile).Methods("PUT")
 	r.HandleFunc("/files/{fileID}", dh.deleteFile).Methods("DELETE")
+	r.HandleFunc("/files/{fileID}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	}).Methods("OPTIONS")
 	r.HandleFunc("/files", dh.listFiles).Methods("GET")
+
 }

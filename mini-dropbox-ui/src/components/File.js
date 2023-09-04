@@ -17,11 +17,11 @@ const File = () => {
 
     const fileURL = `${apiHost}/api/files/${fileId}`;
 
-    const handleSubmit = (event) => {
+    const updateFile = (event) => {
         event.preventDefault();
 
         const formData = new FormData();
-        formData.append('upload_file', file);
+        formData.append('upload_file', name);
         formData.append('description', description);
 
         const config = {
@@ -29,20 +29,37 @@ const File = () => {
                 'content-type': 'multipart/form-data',
             },
         };
-        axios.post(uploadURL, formData, config).then((response) => {
+        axios.putForm(fileURL, formData, config).then((response) => {
             console.log(response.data);
             setUploadedID(response.data.id);
+            setAction('updated');
 
             setTimeout(() => navigate("/files"), 2 * 1000);
         })
-            .catch(error => {
+            .catch((error) => {
                 setDescription('');
-                setFile();
+                setName();
                 setUploadedID(null);
 
                 console.error(error);
             });
+    }
 
+    const deleteFile = () => {
+        // event.preventDefault();
+        setLoading(true);
+
+        axios.delete(fileURL).then((response) => {
+            console.log(response.data);
+            setAction('deleted');
+
+            setTimeout(() => navigate("/files"), 2 * 1000);
+        }).catch((error) => {
+            setError(true);
+            console.error(error);
+        });
+
+        setLoading(false);
     }
 
     useEffect(() => {
@@ -61,55 +78,6 @@ const File = () => {
         setLoading(false);
     }, []);
 
-    const updateFile = (event) => {
-        event.preventDefault();
-
-        const formData = new FormData();
-        formData.append('upload_file', name);
-        formData.append('description', description);
-
-        const config = {
-            headers: {
-                'content-type': 'multipart/form-data',
-            },
-        };
-        axios.put(fileURL, formData, config).then((response) => {
-            console.log(response.data);
-            setUploadedID(response.data.id);
-            setAction('updated');
-
-            setTimeout(() => navigate("/files"), 2 * 1000);
-        })
-            .catch((error) => {
-                setDescription('');
-                setName();
-                setUploadedID(null);
-
-                console.error(error);
-            });
-
-        // axios.putForm(fileURL,).then((response) => {
-        //     console.log(response.data);
-        //     setAction('updated');
-        // });
-    }
-
-    const deleteFile = (event) => {
-        event.preventDefault();
-        setLoading(true);
-
-        axios.delete(fileURL).then((response) => {
-            console.log(response.data);
-            setAction('deleted');
-
-            setTimeout(() => navigate("/files"), 2 * 1000);
-        }).catch((error) => {
-            setError(true);
-            console.error(error);
-        });
-
-        setLoading(false);
-    }
 
     if (loading) {
         return <div>Loading...</div>;

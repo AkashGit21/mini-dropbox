@@ -4,24 +4,20 @@ import (
 	"net/http"
 
 	"github.com/AkashGit21/typeface-assignment/utils"
-	"github.com/gorilla/handlers"
+
 	"github.com/gorilla/mux"
 )
 
 func New() (*mux.Router, error) {
 	router := mux.NewRouter()
 
-	// Enable CORS with the allowed origins you need.
-	corsAllowedOrigins := handlers.AllowedOrigins([]string{"*"})
-
-	// Enable CORS with other options as needed.
-	cors := handlers.CORS(corsAllowedOrigins)
-
 	dropboxRouter := router.PathPrefix("/api").Subrouter()
 	dropboxRouter.Use(PanicRecoveryMiddleware)
-	dropboxRouter.Use(cors)
-
 	dropboxHandler(dropboxRouter)
+
+	// Apply the CORS middleware to all routes
+	router.Use(corsMiddleware)
+
 	return router, nil
 }
 
@@ -55,4 +51,17 @@ func DeleteInactiveRecords() error {
 		}
 	}
 	return nil
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
