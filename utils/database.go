@@ -124,7 +124,7 @@ func (pdb *PersistenceDBLayer) UpdateRecord(id int64, record models.Metadata) er
 // Returns all the active metadata records from Database.
 func (pdb *PersistenceDBLayer) FetchRecords() ([]models.Metadata, error) {
 	// Query to retrieve records with "filename" and "description" fields.
-	query := "SELECT id, filename, size_in_bytes, s3_object_key, description, mime_type, created_at, updated_at FROM file_metadata WHERE status = 1 LIMIT 20"
+	query := "SELECT id, filename, size_in_bytes, s3_object_key, description, mime_type, created_at, updated_at FROM file_metadata WHERE status = 1"
 
 	// Execute the query and retrieve the results.
 	rows, err := pdb.db.Query(query)
