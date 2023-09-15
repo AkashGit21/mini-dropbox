@@ -1,14 +1,14 @@
-# typeface-assignment 
+# mini-dropbox
 
-## Backend Project Assignment Question
+## Description
 The goal of this project is to implement a simplified Dropbox-like service where users can upload, retrieve, and manage their files through a set of RESTful APIs. Alongside the backend APIs, a basic UI will also be provided to showcase these functionalities. The service should also support the storage of metadata for each uploaded file, such as the file name, creation timestamp, and more. 
 
-### API Requirements
-    - [X] **POST** `/files/upload` Allow users to upload files onto the platform.
-    - [X] **GET** `/files/{fileID}` Retrieve a specific file based on a unique identifier.
-    - [X] **PUT** `/files/{fileID}` Update an existing file or its metadata.
-    - [X] **DELETE** `/files/{fileID}` Delete a specific file based on a unique identifier. 
-    - [X] **GET** `/file` List all available files and their metadata.
+### API Requirements (Functional)
+- [X] **POST**    `/files/upload` Allow users to upload files onto the platform.
+- [X] **GET**     `/files/{fileID}` Retrieve a specific file based on a unique identifier.
+- [X] **PUT**     `/files/{fileID}` Update an existing file or its metadata.
+- [X] **DELETE**  `/files/{fileID}` Delete a specific file based on a unique identifier. 
+- [X] **GET**     `/file` List all available files and their metadata.
 
 **Note**: Applied a soft delete, instead of hard delete for the file. Wrote a separate cron to delete the file data after 30 days of inactivity.
 
